@@ -1,25 +1,44 @@
 class TelegramBot {
     constructor() {
-        // IMPORTANT: In production, store these in GitHub Secrets
-        // These are placeholders - you'll set them via environment variables
-        this.token = null;
-        this.chatId = null;
-        this.messageThreadId = null;
+        // Direct configuration with your token
+        this.token = "8735177156:AAGSKgNy8WaG66WK1FKxNCkeqRpxooXstvU";
+        this.chatId = "-1003889484238";
+        this.messageThreadId = "50";
         
-        // Load from localStorage or environment
+        // Also try to load from localStorage if available
         this.loadConfig();
+        
+        console.log("Telegram Bot initialized with token:", this.token ? "Token set" : "No token");
+        console.log("Chat ID:", this.chatId);
     }
     
     loadConfig() {
-        // In GitHub Actions, these come from secrets
-        // For web interface, store securely in localStorage
-        const config = localStorage.getItem('telegramConfig');
-        if (config) {
-            const parsed = JSON.parse(config);
-            this.token = parsed.token;
-            this.chatId = parsed.chatId;
-            this.messageThreadId = parsed.messageThreadId;
+        // Try to load from localStorage, but use hardcoded values as fallback
+        const savedConfig = localStorage.getItem('telegramConfig');
+        if (savedConfig) {
+            try {
+                const config = JSON.parse(savedConfig);
+                if (config.token) this.token = config.token;
+                if (config.chatId) this.chatId = config.chatId;
+                if (config.messageThreadId) this.messageThreadId = config.messageThreadId;
+                console.log("Loaded config from localStorage");
+            } catch(e) {
+                console.error("Error loading config:", e);
+            }
+        } else {
+            // Save hardcoded config to localStorage
+            this.saveConfigToLocalStorage();
         }
+    }
+    
+    saveConfigToLocalStorage() {
+        const config = {
+            token: this.token,
+            chatId: this.chatId,
+            messageThreadId: this.messageThreadId
+        };
+        localStorage.setItem('telegramConfig', JSON.stringify(config));
+        console.log("Saved config to localStorage");
     }
     
     saveConfig(token, chatId, messageThreadId) {
@@ -29,13 +48,26 @@ class TelegramBot {
         localStorage.setItem('telegramConfig', JSON.stringify({
             token, chatId, messageThreadId
         }));
+        console.log("Configuration saved successfully");
+        return true;
     }
     
     async sendMessage(message, parseMode = 'Markdown') {
-        if (!this.token || !this.chatId) {
-            console.error('Telegram configuration missing');
-            return { success: false, error: 'Configuration missing' };
+        // Validate configuration
+        if (!this.token || this.token === "") {
+            console.error("❌ No bot token configured");
+            this.addToLog("❌ Bot token missing! Please configure in settings.", 'error');
+            return { success: false, error: "Bot token missing" };
         }
+        
+        if (!this.chatId || this.chatId === "") {
+            console.error("❌ No chat ID configured");
+            this.addToLog("❌ Chat ID missing! Please configure in settings.", 'error');
+            return { success: false, error: "Chat ID missing" };
+        }
+        
+        console.log("Sending message to chat:", this.chatId);
+        console.log("Message length:", message.length);
         
         try {
             const url = `https://api.telegram.org/bot${this.token}/sendMessage`;
@@ -45,10 +77,13 @@ class TelegramBot {
                 parse_mode: parseMode
             };
             
-            if (this.messageThreadId) {
+            // Add message thread ID if provided
+            if (this.messageThreadId && this.messageThreadId !== "") {
                 payload.message_thread_id = parseInt(this.messageThreadId);
+                console.log("Using message thread ID:", this.messageThreadId);
             }
             
+            console.log("Sending to Telegram API...");
             const response = await fetch(url, {
                 method: 'POST',
                 headers: {
@@ -58,22 +93,26 @@ class TelegramBot {
             });
             
             const data = await response.json();
+            console.log("Telegram API response:", data);
             
             if (data.ok) {
-                this.addToLog('Message sent successfully', 'success');
+                console.log("✅ Message sent successfully!");
+                this.addToLog("✅ Message sent successfully to Telegram!", 'success');
                 return { success: true, data };
             } else {
-                throw new Error(data.description);
+                throw new Error(data.description || "Unknown error");
             }
         } catch (error) {
-            console.error('Telegram send error:', error);
-            this.addToLog(`Failed to send: ${error.message}`, 'error');
+            console.error("❌ Telegram send error:", error);
+            this.addToLog(`❌ Failed to send: ${error.message}`, 'error');
             return { success: false, error: error.message };
         }
     }
     
     async sendMarketUpdate(marketData, newsItems, signals = null) {
-        let message = this.formatMarketUpdate(marketData, newsItems, signals);
+        console.log("Formatting market update...");
+        const message = this.formatMarketUpdate(marketData, newsItems, signals);
+        console.log("Message formatted, sending...");
         return await this.sendMessage(message);
     }
     
@@ -90,9 +129,12 @@ class TelegramBot {
         })}`);
         lines.push(`⏰ ${new Date().toLocaleTimeString('en-US', { 
             hour: '2-digit', 
-            minute: '2-digit', 
+            minute: '2-digit',
+            second: '2-digit',
             timeZoneName: 'short' 
         })}`);
+        lines.push('');
+        lines.push('━━━━━━━━━━━━━━━━━━━━━');
         lines.push('');
         
         // XAUUSD Section
@@ -115,25 +157,36 @@ class TelegramBot {
             lines.push('');
         }
         
+        lines.push('━━━━━━━━━━━━━━━━━━━━━');
+        lines.push('');
+        
         // News Section
         if (newsItems && newsItems.length > 0) {
             lines.push('📰 *TOP MARKET NEWS*');
             lines.push('');
             
             // Show top 5 news items
-            newsItems.slice(0, 5).forEach((item, index) => {
+            const topNews = newsItems.slice(0, 5);
+            topNews.forEach((item, index) => {
                 const impactEmoji = item.impact === 'HIGH' ? '🔴' : item.impact === 'MEDIUM' ? '🟡' : '🟢';
-                lines.push(`${index + 1}. ${impactEmoji} *${item.title}*`);
-                if (item.description) {
-                    lines.push(`   ${item.description.substring(0, 100)}...`);
+                lines.push(`${index + 1}. ${impactEmoji} *${this.truncateText(item.title, 80)}*`);
+                if (item.description && item.description !== "Click to read full article") {
+                    lines.push(`   ${this.truncateText(item.description, 100)}`);
                 }
                 lines.push(`   📍 ${item.source} | ${new Date(item.pubDate).toLocaleTimeString()}`);
                 lines.push('');
             });
+        } else {
+            lines.push('📰 *TOP MARKET NEWS*');
+            lines.push('');
+            lines.push('No recent news available at this moment.');
+            lines.push('');
         }
         
         // Signals Section
         if (signals && signals.length > 0) {
+            lines.push('━━━━━━━━━━━━━━━━━━━━━');
+            lines.push('');
             lines.push('⚡ *TRADING SIGNALS*');
             lines.push('');
             signals.forEach(signal => {
@@ -146,13 +199,27 @@ class TelegramBot {
         }
         
         // Footer
-        lines.push('---');
-        lines.push('🤖 *Automated by Market Bot*');
-        lines.push('⚠️ *Disclaimer:* For informational purposes only. Always DYOR.');
+        lines.push('━━━━━━━━━━━━━━━━━━━━━');
         lines.push('');
-        lines.push('🔄 *Next update:* Coming soon');
+        lines.push('🤖 *Automated by Market Bot*');
+        lines.push('⚠️ *Disclaimer:* For informational purposes only.');
+        lines.push('Always do your own research (DYOR).');
+        lines.push('');
+        lines.push('🔄 *Next update:* Scheduled for next interval');
         
         return lines.join('\n');
+    }
+    
+    truncateText(text, maxLength) {
+        if (!text) return "";
+        if (text.length <= maxLength) return text;
+        return text.substring(0, maxLength) + '...';
+    }
+    
+    async testConnection() {
+        console.log("Testing Telegram connection...");
+        const testMessage = "🤖 *Market Bot Test*\n\nBot is online and configured correctly!\n\nTime: " + new Date().toLocaleString();
+        return await this.sendMessage(testMessage);
     }
     
     addToLog(message, type = 'info') {
@@ -161,9 +228,10 @@ class TelegramBot {
             const logEntry = document.createElement('div');
             logEntry.className = 'log-entry';
             const time = new Date().toLocaleTimeString();
+            const icon = type === 'success' ? '✅' : type === 'error' ? '❌' : 'ℹ️';
             logEntry.innerHTML = `
                 <span class="log-time">[${time}]</span>
-                <span class="log-${type}">${message}</span>
+                <span class="log-${type}">${icon} ${message}</span>
             `;
             logContainer.insertBefore(logEntry, logContainer.firstChild);
             
