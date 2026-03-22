@@ -1,0 +1,16 @@
+{
+  "name": "market-bot",
+  "version": "1.0.0",
+  "description": "Automated market updates bot for Telegram",
+  "main": "server/update-bot.js",
+  "scripts": {
+    "start": "node server/update-bot.js",
+    "test": "echo \"Error: no test specified\" && exit 1"
+  },
+  "dependencies": {
+    "node-fetch": "^2.6.7"
+  },
+  "keywords": ["telegram", "bot", "forex", "crypto", "market"],
+  "author": "",
+  "license": "MIT"
+}
