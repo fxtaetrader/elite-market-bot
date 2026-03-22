@@ -316,7 +316,7 @@ class MarketBot {
                 <h3>Configure Telegram Bot</h3>
                 <div class="form-group">
                     <label>Bot Token (from @BotFather):</label>
-                    <input type="text" id="botToken" placeholder="1234567890:ABCdefGHIjklMNOpqrsTUVwxyz">
+                    <input type="text" id="botToken" placeholder="8735177156:AAGSKgNy8WaG66WK1FKxNCkeqRpxooXstvU">
                 </div>
                 <div class="form-group">
                     <label>Chat ID:</label>
