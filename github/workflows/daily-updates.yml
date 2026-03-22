@@ -1,0 +1,30 @@
+name: Automated Market Updates
+
+on:
+  schedule:
+    # Runs at 8:00 and 16:00 UTC daily
+    - cron: '0 8,16 * * *'
+  workflow_dispatch:  # Allows manual trigger
+
+jobs:
+  send-telegram-update:
+    runs-on: ubuntu-latest
+    
+    steps:
+    - name: Checkout code
+      uses: actions/checkout@v3
+    
+    - name: Setup Node.js
+      uses: actions/setup-node@v3
+      with:
+        node-version: '18'
+    
+    - name: Install dependencies
+      run: npm install node-fetch
+    
+    - name: Run market update script
+      env:
+        TELEGRAM_TOKEN: ${{ secrets.TELEGRAM_TOKEN }}
+        CHAT_ID: ${{ secrets.CHAT_ID }}
+        MESSAGE_THREAD_ID: ${{ secrets.MESSAGE_THREAD_ID }}
+      run: node server/update-bot.js
