@@ -1,0 +1,482 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Market Bot Dashboard - XAUUSD & BTCUSD News</title>
+    <link rel="stylesheet" href="css/style.css">
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@300;400;500;600;700&display=swap" rel="stylesheet">
+</head>
+<style>* {
+    margin: 0;
+    padding: 0;
+    box-sizing: border-box;
+}
+
+body {
+    font-family: 'Inter', sans-serif;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: #333;
+    line-height: 1.6;
+}
+
+.container {
+    max-width: 1400px;
+    margin: 0 auto;
+    padding: 20px;
+}
+
+/* Header Styles */
+header {
+    background: white;
+    border-radius: 15px;
+    padding: 20px 30px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    flex-wrap: wrap;
+}
+
+.logo h1 {
+    font-size: 1.8rem;
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    -webkit-background-clip: text;
+    -webkit-text-fill-color: transparent;
+    margin-bottom: 5px;
+}
+
+.logo p {
+    color: #666;
+    font-size: 0.9rem;
+}
+
+.status {
+    display: flex;
+    gap: 15px;
+    align-items: center;
+}
+
+.status-badge {
+    display: flex;
+    align-items: center;
+    gap: 8px;
+    padding: 8px 15px;
+    background: #f0f0f0;
+    border-radius: 20px;
+}
+
+.dot {
+    width: 10px;
+    height: 10px;
+    border-radius: 50%;
+    background: #4caf50;
+    animation: pulse 2s infinite;
+}
+
+@keyframes pulse {
+    0% { opacity: 1; transform: scale(1); }
+    50% { opacity: 0.5; transform: scale(1.2); }
+    100% { opacity: 1; transform: scale(1); }
+}
+
+.btn-primary {
+    background: linear-gradient(135deg, #667eea 0%, #764ba2 100%);
+    color: white;
+    border: none;
+    padding: 10px 20px;
+    border-radius: 8px;
+    cursor: pointer;
+    font-weight: 600;
+    transition: transform 0.2s;
+}
+
+.btn-primary:hover {
+    transform: translateY(-2px);
+}
+
+/* Market Cards */
+.markets-grid {
+    display: grid;
+    grid-template-columns: 1fr 1fr;
+    gap: 30px;
+    margin-bottom: 30px;
+}
+
+.market-card {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+    transition: transform 0.3s;
+}
+
+.market-card:hover {
+    transform: translateY(-5px);
+}
+
+.market-card.featured {
+    border: 2px solid #ffd700;
+}
+
+.market-header {
+    display: flex;
+    justify-content: space-between;
+    align-items: center;
+    margin-bottom: 20px;
+    padding-bottom: 15px;
+    border-bottom: 2px solid #f0f0f0;
+}
+
+.market-header h2 {
+    font-size: 1.5rem;
+}
+
+.market-priority {
+    background: #ffd700;
+    color: #333;
+    padding: 5px 10px;
+    border-radius: 20px;
+    font-size: 0.8rem;
+    font-weight: bold;
+}
+
+.price-container {
+    text-align: center;
+    margin-bottom: 20px;
+    padding: 20px;
+    background: linear-gradient(135deg, #f5f7fa 0%, #c3cfe2 100%);
+    border-radius: 10px;
+}
+
+.price {
+    font-size: 2rem;
+    font-weight: bold;
+    color: #333;
+}
+
+.change {
+    font-size: 1rem;
+    margin-top: 5px;
+}
+
+.change.positive {
+    color: #4caf50;
+}
+
+.change.negative {
+    color: #f44336;
+}
+
+/* News Feed */
+.news-feed h3 {
+    margin-bottom: 15px;
+    color: #667eea;
+}
+
+.news-list {
+    max-height: 400px;
+    overflow-y: auto;
+}
+
+.news-item {
+    padding: 12px;
+    border-left: 3px solid #667eea;
+    margin-bottom: 10px;
+    background: #f9f9f9;
+    border-radius: 5px;
+    transition: all 0.2s;
+}
+
+.news-item:hover {
+    background: #f0f0f0;
+    transform: translateX(5px);
+}
+
+.news-title {
+    font-weight: 600;
+    margin-bottom: 5px;
+    cursor: pointer;
+}
+
+.news-meta {
+    font-size: 0.8rem;
+    color: #666;
+    display: flex;
+    gap: 10px;
+    margin-top: 5px;
+}
+
+.news-impact {
+    padding: 2px 8px;
+    border-radius: 12px;
+    font-size: 0.7rem;
+    font-weight: bold;
+}
+
+.impact-high {
+    background: #ffebee;
+    color: #f44336;
+}
+
+.impact-medium {
+    background: #fff3e0;
+    color: #ff9800;
+}
+
+.impact-low {
+    background: #e8f5e9;
+    color: #4caf50;
+}
+
+/* Other Markets */
+.other-markets {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.other-markets h3 {
+    margin-bottom: 20px;
+    color: #667eea;
+}
+
+.markets-list {
+    display: grid;
+    grid-template-columns: repeat(auto-fill, minmax(200px, 1fr));
+    gap: 15px;
+}
+
+.market-item {
+    padding: 15px;
+    background: #f9f9f9;
+    border-radius: 10px;
+    text-align: center;
+}
+
+.market-name {
+    font-weight: 600;
+    margin-bottom: 5px;
+}
+
+.market-price {
+    font-size: 1.1rem;
+    font-weight: bold;
+}
+
+/* Updates Log */
+.updates-log {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    margin-bottom: 30px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.log-container {
+    max-height: 300px;
+    overflow-y: auto;
+}
+
+.log-entry {
+    padding: 12px;
+    border-bottom: 1px solid #f0f0f0;
+    font-family: monospace;
+    font-size: 0.9rem;
+}
+
+.log-time {
+    color: #667eea;
+    font-weight: 600;
+    margin-right: 10px;
+}
+
+/* Control Panel */
+.control-panel {
+    background: white;
+    border-radius: 15px;
+    padding: 25px;
+    box-shadow: 0 10px 30px rgba(0,0,0,0.1);
+}
+
+.config-form {
+    display: flex;
+    gap: 20px;
+    flex-wrap: wrap;
+    margin-top: 15px;
+}
+
+.form-group {
+    display: flex;
+    flex-direction: column;
+    gap: 5px;
+}
+
+.form-group label {
+    font-weight: 600;
+    font-size: 0.9rem;
+}
+
+.form-group select,
+.form-group input {
+    padding: 8px 12px;
+    border: 1px solid #ddd;
+    border-radius: 5px;
+    font-size: 0.9rem;
+}
+
+/* Responsive Design */
+@media (max-width: 768px) {
+    .markets-grid {
+        grid-template-columns: 1fr;
+    }
+    
+    header {
+        flex-direction: column;
+        text-align: center;
+        gap: 15px;
+    }
+    
+    .status {
+        width: 100%;
+        justify-content: center;
+    }
+    
+    .config-form {
+        flex-direction: column;
+    }
+}
+
+/* Loading Animation */
+.loading {
+    text-align: center;
+    padding: 20px;
+    color: #666;
+}
+
+.spinner {
+    border: 3px solid #f3f3f3;
+    border-top: 3px solid #667eea;
+    border-radius: 50%;
+    width: 40px;
+    height: 40px;
+    animation: spin 1s linear infinite;
+    margin: 0 auto 10px;
+}
+
+@keyframes spin {
+    0% { transform: rotate(0deg); }
+    100% { transform: rotate(360deg); }
+}
+
+/* Scrollbar */
+::-webkit-scrollbar {
+    width: 8px;
+}
+
+::-webkit-scrollbar-track {
+    background: #f1f1f1;
+    border-radius: 10px;
+}
+
+::-webkit-scrollbar-thumb {
+    background: #667eea;
+    border-radius: 10px;
+}</style>
+<body>
+    <div class="container">
+        <header>
+            <div class="logo">
+                <h1>📊 Market Bot Dashboard</h1>
+                <p>Real-time XAUUSD & BTCUSD News | Automated Telegram Updates</p>
+            </div>
+            <div class="status">
+                <div class="status-badge" id="botStatus">
+                    <span class="dot"></span>
+                    <span id="statusText">Initializing...</span>
+                </div>
+                <button id="manualUpdateBtn" class="btn-primary">🔄 Send Update Now</button>
+            </div>
+        </header>
+
+        <div class="markets-grid">
+            <!-- XAUUSD Section -->
+            <div class="market-card featured">
+                <div class="market-header">
+                    <h2>🥇 XAUUSD - Gold</h2>
+                    <span class="market-priority">Priority #1</span>
+                </div>
+                <div class="price-container" id="xauPrice">
+                    <div class="price">Loading...</div>
+                    <div class="change"></div>
+                </div>
+                <div class="news-feed" id="xauNews">
+                    <h3>Latest News</h3>
+                    <div class="news-list"></div>
+                </div>
+            </div>
+
+            <!-- BTCUSD Section -->
+            <div class="market-card featured">
+                <div class="market-header">
+                    <h2>₿ BTCUSD - Bitcoin</h2>
+                    <span class="market-priority">Priority #2</span>
+                </div>
+                <div class="price-container" id="btcPrice">
+                    <div class="price">Loading...</div>
+                    <div class="change"></div>
+                </div>
+                <div class="news-feed" id="btcNews">
+                    <h3>Latest News</h3>
+                    <div class="news-list"></div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Other Markets -->
+        <div class="other-markets">
+            <h3>📈 Other Markets</h3>
+            <div class="markets-list" id="otherMarkets">
+                <!-- Dynamic content -->
+            </div>
+        </div>
+
+        <!-- Telegram Updates Log -->
+        <div class="updates-log">
+            <h3>📨 Recent Telegram Updates</h3>
+            <div class="log-container" id="updateLog">
+                <div class="log-entry">Waiting for updates...</div>
+            </div>
+        </div>
+
+        <!-- Control Panel -->
+        <div class="control-panel">
+            <h3>⚙️ Bot Configuration</h3>
+            <div class="config-form">
+                <div class="form-group">
+                    <label>Update Frequency:</label>
+                    <select id="updateFrequency">
+                        <option value="hourly">Hourly</option>
+                        <option value="daily" selected>Daily (8 AM & 4 PM)</option>
+                        <option value="manual">Manual Only</option>
+                    </select>
+                </div>
+                <div class="form-group">
+                    <label>Include Signals:</label>
+                    <input type="checkbox" id="includeSignals" checked>
+                </div>
+                <div class="form-group">
+                    <label>Alert Thresholds:</label>
+                    <input type="number" id="alertThreshold" placeholder="Price change %" value="2">
+                </div>
+            </div>
+        </div>
+    </div>
+    <script src="js/market-data.js"></script>
+    <script src="js/telegram.js"></script>
+    <script src="js/bot.js"></script>
+</body>
+</html>
