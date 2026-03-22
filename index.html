@@ -415,7 +415,9 @@ header {
                 </div>
                 <div class="news-feed" id="xauNews">
                     <h3>Latest News</h3>
-                    <div class="news-list"></div>
+                    <div class="news-list">
+                        <div class="loading">Loading news...</div>
+                    </div>
                 </div>
             </div>
 
@@ -431,7 +433,9 @@ header {
                 </div>
                 <div class="news-feed" id="btcNews">
                     <h3>Latest News</h3>
-                    <div class="news-list"></div>
+                    <div class="news-list">
+                        <div class="loading">Loading news...</div>
+                    </div>
                 </div>
             </div>
         </div>
@@ -440,7 +444,7 @@ header {
         <div class="other-markets">
             <h3>📈 Other Markets</h3>
             <div class="markets-list" id="otherMarkets">
-                <!-- Dynamic content -->
+                <div class="loading">Loading markets...</div>
             </div>
         </div>
 
@@ -448,7 +452,7 @@ header {
         <div class="updates-log">
             <h3>📨 Recent Telegram Updates</h3>
             <div class="log-container" id="updateLog">
-                <div class="log-entry">Waiting for updates...</div>
+                <div class="log-entry">Bot initializing...</div>
             </div>
         </div>
 
@@ -469,12 +473,18 @@ header {
                     <input type="checkbox" id="includeSignals" checked>
                 </div>
                 <div class="form-group">
-                    <label>Alert Thresholds:</label>
-                    <input type="number" id="alertThreshold" placeholder="Price change %" value="2">
+                    <label>Alert Thresholds (%):</label>
+                    <input type="number" id="alertThreshold" placeholder="Price change %" value="2" step="0.5">
                 </div>
+            </div>
+            <div class="config-info" style="margin-top: 15px; padding: 10px; background: #f0f0f0; border-radius: 5px; font-size: 0.9rem;">
+                <strong>ℹ️ Bot Status:</strong> Configured with your Telegram token<br>
+                <strong>Chat ID:</strong> -1003889484238<br>
+                <strong>Topic ID:</strong> 50
             </div>
         </div>
     </div>
+
     <script src="js/market-data.js"></script>
     <script src="js/telegram.js"></script>
     <script src="js/bot.js"></script>
