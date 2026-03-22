@@ -1,5 +1,6 @@
 class MarketBot {
     constructor() {
+        console.log("Initializing Market Bot...");
         this.dataFetcher = new MarketDataFetcher();
         this.telegramBot = new TelegramBot();
         this.updateInterval = null;
@@ -10,48 +11,66 @@ class MarketBot {
     }
     
     async init() {
+        console.log("Bot initialization started...");
         this.updateStatus('initializing');
-        await this.loadConfig();
         this.setupEventListeners();
         this.startScheduler();
-        await this.performUpdate(); // Initial update
+        
+        // Test Telegram connection first
+        const testResult = await this.telegramBot.testConnection();
+        if (testResult.success) {
+            console.log("✅ Telegram connection successful!");
+            this.telegramBot.addToLog("Bot initialized successfully! Telegram connected.", 'success');
+        } else {
+            console.error("❌ Telegram connection failed:", testResult.error);
+            this.telegramBot.addToLog(`⚠️ Telegram connection failed: ${testResult.error}`, 'error');
+        }
+        
+        // Perform initial update
+        await this.performUpdate();
         this.updateStatus('active');
+        console.log("Bot initialization complete!");
     }
     
-    async loadConfig() {
-        // Load saved configuration
+    setupEventListeners() {
+        const manualBtn = document.getElementById('manualUpdateBtn');
+        if (manualBtn) {
+            manualBtn.addEventListener('click', () => {
+                console.log("Manual update triggered");
+                this.performUpdate(true);
+            });
+        }
+        
+        const frequencySelect = document.getElementById('updateFrequency');
+        if (frequencySelect) {
+            frequencySelect.addEventListener('change', (e) => {
+                localStorage.setItem('updateFrequency', e.target.value);
+                this.startScheduler();
+            });
+        }
+        
+        const includeSignals = document.getElementById('includeSignals');
+        if (includeSignals) {
+            includeSignals.addEventListener('change', (e) => {
+                localStorage.setItem('includeSignals', e.target.checked);
+            });
+        }
+        
+        const alertThreshold = document.getElementById('alertThreshold');
+        if (alertThreshold) {
+            alertThreshold.addEventListener('change', (e) => {
+                localStorage.setItem('alertThreshold', e.target.value);
+            });
+        }
+        
+        // Load saved settings
         const savedFreq = localStorage.getItem('updateFrequency');
         const savedSignals = localStorage.getItem('includeSignals');
         const savedThreshold = localStorage.getItem('alertThreshold');
         
-        if (savedFreq) document.getElementById('updateFrequency').value = savedFreq;
-        if (savedSignals) document.getElementById('includeSignals').checked = savedSignals === 'true';
-        if (savedThreshold) document.getElementById('alertThreshold').value = savedThreshold;
-        
-        // Check if Telegram config exists
-        const telegramConfig = localStorage.getItem('telegramConfig');
-        if (!telegramConfig) {
-            this.showConfigPrompt();
-        }
-    }
-    
-    setupEventListeners() {
-        document.getElementById('manualUpdateBtn')?.addEventListener('click', () => {
-            this.performUpdate(true);
-        });
-        
-        document.getElementById('updateFrequency')?.addEventListener('change', (e) => {
-            localStorage.setItem('updateFrequency', e.target.value);
-            this.startScheduler();
-        });
-        
-        document.getElementById('includeSignals')?.addEventListener('change', (e) => {
-            localStorage.setItem('includeSignals', e.target.checked);
-        });
-        
-        document.getElementById('alertThreshold')?.addEventListener('change', (e) => {
-            localStorage.setItem('alertThreshold', e.target.value);
-        });
+        if (savedFreq && frequencySelect) frequencySelect.value = savedFreq;
+        if (savedSignals && includeSignals) includeSignals.checked = savedSignals === 'true';
+        if (savedThreshold && alertThreshold) alertThreshold.value = savedThreshold;
     }
     
     startScheduler() {
@@ -59,8 +78,8 @@ class MarketBot {
             clearInterval(this.updateInterval);
         }
         
-        const frequency = document.getElementById('updateFrequency').value;
-        let intervalMinutes = 60; // hourly default
+        const frequency = document.getElementById('updateFrequency')?.value || 'daily';
+        let intervalMinutes = 60;
         
         switch(frequency) {
             case 'hourly':
@@ -70,10 +89,12 @@ class MarketBot {
                 intervalMinutes = 1440;
                 break;
             case 'manual':
+                console.log("Manual mode - no automatic updates");
                 return;
         }
         
         this.updateInterval = setInterval(() => {
+            console.log(`Scheduled update triggered (every ${intervalMinutes} minutes)`);
             this.performUpdate();
         }, intervalMinutes * 60 * 1000);
         
@@ -81,39 +102,59 @@ class MarketBot {
     }
     
     async performUpdate(manual = false) {
+        console.log("Starting market update...");
         this.updateStatus('updating');
         
         try {
             // Fetch all data
-            const [xauData, btcData, xauNews, btcNews, otherMarkets] = await Promise.all([
-                this.dataFetcher.fetchXAUUSD(),
-                this.dataFetcher.fetchBTCUSD(),
-                this.dataFetcher.fetchMarketNews('XAUUSD'),
-                this.dataFetcher.fetchMarketNews('BTCUSD'),
-                this.dataFetcher.fetchOtherMarkets()
-            ]);
+            console.log("Fetching XAUUSD data...");
+            const xauData = await this.dataFetcher.fetchXAUUSD();
+            console.log("XAUUSD:", xauData);
+            
+            console.log("Fetching BTCUSD data...");
+            const btcData = await this.dataFetcher.fetchBTCUSD();
+            console.log("BTCUSD:", btcData);
+            
+            console.log("Fetching XAUUSD news...");
+            const xauNews = await this.dataFetcher.fetchMarketNews('XAUUSD');
+            console.log(`Found ${xauNews.length} XAUUSD news items`);
+            
+            console.log("Fetching BTCUSD news...");
+            const btcNews = await this.dataFetcher.fetchMarketNews('BTCUSD');
+            console.log(`Found ${btcNews.length} BTCUSD news items`);
+            
+            console.log("Fetching other markets...");
+            const otherMarkets = await this.dataFetcher.fetchOtherMarkets();
             
             // Combine news (prioritize XAUUSD then BTCUSD)
             const allNews = [...xauNews, ...btcNews];
+            console.log(`Total news items: ${allNews.length}`);
             
             // Generate signals if enabled
             let signals = [];
-            if (document.getElementById('includeSignals').checked) {
+            const includeSignals = document.getElementById('includeSignals')?.checked;
+            if (includeSignals) {
+                console.log("Generating trading signals...");
                 signals = this.generateSignals(xauData, btcData);
+                console.log(`Generated ${signals.length} signals`);
             }
             
             // Update UI
+            console.log("Updating UI...");
             this.updateUI({ xau: xauData, btc: btcData, other: otherMarkets }, allNews);
             
             // Send to Telegram
+            console.log("Sending to Telegram...");
             const marketData = { xau: xauData, btc: btcData };
             const result = await this.telegramBot.sendMarketUpdate(marketData, allNews, signals);
             
             if (result.success) {
+                console.log("✅ Update completed successfully!");
                 this.addToHistory({ success: true, time: new Date(), data: marketData });
                 this.updateStatus('active');
-                this.telegramBot.addToLog(`✅ Update sent successfully at ${new Date().toLocaleTimeString()}`, 'success');
+                this.telegramBot.addToLog(`✅ Market update sent successfully at ${new Date().toLocaleTimeString()}`, 'success');
             } else {
+                console.error("❌ Update failed:", result.error);
                 this.updateStatus('error', result.error);
                 this.telegramBot.addToLog(`❌ Update failed: ${result.error}`, 'error');
             }
@@ -122,7 +163,7 @@ class MarketBot {
             await this.checkPriceAlerts(xauData, btcData);
             
         } catch (error) {
-            console.error('Update failed:', error);
+            console.error('Update failed with error:', error);
             this.updateStatus('error', error.message);
             this.telegramBot.addToLog(`❌ Update failed: ${error.message}`, 'error');
         }
@@ -168,17 +209,20 @@ class MarketBot {
     }
     
     async checkPriceAlerts(xauData, btcData) {
-        const threshold = parseFloat(document.getElementById('alertThreshold').value) || 2;
-        const lastData = this.lastUpdateTime ? this.updateHistory[0]?.data : null;
+        const threshold = parseFloat(document.getElementById('alertThreshold')?.value) || 2;
+        const lastData = this.updateHistory[0]?.data;
         
-        if (lastData) {
-            if (Math.abs(xauData.change) >= threshold) {
+        if (lastData && lastData.xau && lastData.btc) {
+            const xauChange = Math.abs(xauData.change);
+            const btcChange = Math.abs(btcData.change);
+            
+            if (xauChange >= threshold) {
                 await this.telegramBot.sendMessage(
                     `⚠️ *PRICE ALERT*\n\nXAUUSD has moved ${xauData.change}%\nCurrent price: $${xauData.price}\nThreshold: ${threshold}%`
                 );
             }
             
-            if (Math.abs(btcData.change) >= threshold) {
+            if (btcChange >= threshold) {
                 await this.telegramBot.sendMessage(
                     `⚠️ *PRICE ALERT*\n\nBTCUSD has moved ${btcData.change}%\nCurrent price: $${btcData.price.toLocaleString()}\nThreshold: ${threshold}%`
                 );
@@ -207,9 +251,13 @@ class MarketBot {
                 n.title.toLowerCase().includes('xau')
             ).slice(0, 5);
             
-            xauNews.forEach(news => {
-                xauNewsList.appendChild(this.createNewsElement(news));
-            });
+            if (xauNews.length === 0) {
+                xauNewsList.innerHTML = '<div class="loading">No recent news available</div>';
+            } else {
+                xauNews.forEach(news => {
+                    xauNewsList.appendChild(this.createNewsElement(news));
+                });
+            }
         }
         
         // Update BTCUSD
@@ -230,21 +278,25 @@ class MarketBot {
                 n.title.toLowerCase().includes('btc')
             ).slice(0, 5);
             
-            btcNews.forEach(news => {
-                btcNewsList.appendChild(this.createNewsElement(news));
-            });
+            if (btcNews.length === 0) {
+                btcNewsList.innerHTML = '<div class="loading">No recent news available</div>';
+            } else {
+                btcNews.forEach(news => {
+                    btcNewsList.appendChild(this.createNewsElement(news));
+                });
+            }
         }
         
         // Update other markets
         const otherMarketsList = document.getElementById('otherMarkets');
-        if (otherMarketsList && marketData.other) {
+        if (otherMarketsList && marketData.other && marketData.other.length > 0) {
             otherMarketsList.innerHTML = '';
             marketData.other.forEach(market => {
                 const marketEl = document.createElement('div');
                 marketEl.className = 'market-item';
                 marketEl.innerHTML = `
                     <div class="market-name">${market.name}</div>
-                    <div class="market-price">$${market.price.toLocaleString()}</div>
+                    <div class="market-price">$${typeof market.price === 'number' ? market.price.toLocaleString() : market.price}</div>
                     <div class="market-change ${market.change >= 0 ? 'positive' : 'negative'}">
                         ${market.change >= 0 ? '+' : ''}${market.change}%
                     </div>
@@ -258,7 +310,7 @@ class MarketBot {
         const div = document.createElement('div');
         div.className = 'news-item';
         div.innerHTML = `
-            <div class="news-title">${news.title}</div>
+            <div class="news-title">${this.escapeHtml(news.title)}</div>
             <div class="news-meta">
                 <span>${news.source}</span>
                 <span>${new Date(news.pubDate).toLocaleTimeString()}</span>
@@ -274,6 +326,12 @@ class MarketBot {
         return div;
     }
     
+    escapeHtml(text) {
+        const div = document.createElement('div');
+        div.textContent = text;
+        return div.innerHTML;
+    }
+    
     updateStatus(status, errorMsg = null) {
         const statusText = document.getElementById('statusText');
         const dot = document.querySelector('.dot');
@@ -283,19 +341,19 @@ class MarketBot {
         switch(status) {
             case 'initializing':
                 statusText.textContent = 'Initializing...';
-                dot.style.background = '#ff9800';
+                if (dot) dot.style.background = '#ff9800';
                 break;
             case 'active':
                 statusText.textContent = 'Active - Ready';
-                dot.style.background = '#4caf50';
+                if (dot) dot.style.background = '#4caf50';
                 break;
             case 'updating':
                 statusText.textContent = 'Updating...';
-                dot.style.background = '#2196f3';
+                if (dot) dot.style.background = '#2196f3';
                 break;
             case 'error':
-                statusText.textContent = `Error: ${errorMsg}`;
-                dot.style.background = '#f44336';
+                statusText.textContent = `Error: ${errorMsg || 'Unknown error'}`;
+                if (dot) dot.style.background = '#f44336';
                 break;
         }
     }
@@ -305,48 +363,16 @@ class MarketBot {
         if (this.updateHistory.length > 10) this.updateHistory.pop();
         
         // Save to localStorage
-        localStorage.setItem('updateHistory', JSON.stringify(this.updateHistory));
-    }
-    
-    showConfigPrompt() {
-        const modal = document.createElement('div');
-        modal.className = 'modal';
-        modal.innerHTML = `
-            <div class="modal-content">
-                <h3>Configure Telegram Bot</h3>
-                <div class="form-group">
-                    <label>Bot Token (from @BotFather):</label>
-                    <input type="text" id="botToken" placeholder="8735177156:AAGSKgNy8WaG66WK1FKxNCkeqRpxooXstvU">
-                </div>
-                <div class="form-group">
-                    <label>Chat ID:</label>
-                    <input type="text" id="chatId" placeholder="-1003889484238">
-                </div>
-                <div class="form-group">
-                    <label>Message Thread ID (optional):</label>
-                    <input type="text" id="threadId" placeholder="50">
-                </div>
-                <button id="saveConfigBtn" class="btn-primary">Save & Continue</button>
-            </div>
-        `;
-        
-        document.body.appendChild(modal);
-        
-        document.getElementById('saveConfigBtn').addEventListener('click', () => {
-            const token = document.getElementById('botToken').value;
-            const chatId = document.getElementById('chatId').value;
-            const threadId = document.getElementById('threadId').value;
-            
-            if (token && chatId) {
-                this.telegramBot.saveConfig(token, chatId, threadId);
-                modal.remove();
-                this.telegramBot.addToLog('Telegram configured successfully', 'success');
-            }
-        });
+        try {
+            localStorage.setItem('updateHistory', JSON.stringify(this.updateHistory));
+        } catch(e) {
+            console.error("Error saving history:", e);
+        }
     }
 }
 
 // Initialize bot when page loads
 document.addEventListener('DOMContentLoaded', () => {
+    console.log("DOM loaded, initializing Market Bot...");
     window.marketBot = new MarketBot();
 });
